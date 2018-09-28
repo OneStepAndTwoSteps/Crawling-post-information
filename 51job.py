@@ -59,13 +59,13 @@ class get_data():
 
         for url in urls:
             # url=START_URL.format(page=i)
-
+            '''html=requests.get(url,headers=HEADERS) 返回的是 Response [code]'''
             write_log.info("开始爬取第 {} 个页面" .format(urls.index(url)+1))
             html=requests.get(url,headers=HEADERS).content.decode('gbk')
             bsobj=BeautifulSoup(html,'lxml').find("div",{"class":"dw_table"}).find_all("div",{"class":"el"})
 
             for b in bsobj:
-
+                '''这里用try 因为上面bsobj中包含标题，但标题中没有href，title等标签，所以失败则跳过'''
                 try:
                     href, work=b.find("a")["href"], b.find("a")["title"]
                     place=b.find("span",{"class":"t3"})
@@ -96,7 +96,9 @@ class get_data():
                     self.count += 1
                     write_log.info("开始爬取第 {} 条岗位信息".format(self.count))
                     html=requests.get(url,headers=HEADERS).content.decode('gbk')
-
+                    '''如果线程里每从队列里取一次，但没有执行task_done()，则join无法判断队列到底有没有结束，在最后执行个join()是等不到结果的，会一直挂起。
+                    可以理解为，每task_done一次 就从队列里删掉一个元素，这样在最后join的时候根据队列长度是否为零来判断队列是否结束，从而执行主线程。
+                                  '''
 
                     write_log.info("队列长度为 {} ".format(self.queue_list.qsize()))
 
@@ -170,16 +172,16 @@ class get_data():
             work=f.read()
         # print(work)
         # exit()
-
+        '''开发者可以指定自己自定义的词典，以便包含 jieba 词库里没有的词。虽然 jieba 有新词识别能力，但是自行添加新词可以保证更高的正确率'''
         jieba.load_userdict(os.path.join("data","customize_dic.txt"))
         # cut_all=False 精确模式
         seg_list=jieba.cut(work,cut_all=False)
         '''seg是一个个分好的词'''
         counter=dict()
         for seg in seg_list:
-
+            '''如果seg这个键不在字典里，直接用[]取值会报KeyError的，所以用get方法取值，如果键不存在默认返回1,然后再对值 +1 然后重新设置value上'''
             counter[seg]=counter.get(seg,1)+1
-
+        ''' lamdba排序 倒序'''
         counter_sort = sorted(counter.items(), key=lambda value: value[1], reverse=True)
 
         pprint(counter_sort)
